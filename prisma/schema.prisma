@@ -1,0 +1,256 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  name      String?
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts    Post[]
+  comments Comment[]
+  likes    Like[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique
+  slug        String @unique
+  description String?
+  color       String @default("#6B7280")
+  
+  // Relations
+  posts Post[]
+  
+  @@map("categories")
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  color String @default("#6B7280")
+  
+  // Relations
+  posts Post[]
+  
+  @@map("tags")
+}
+
+model Post {
+  id           String    @id @default(cuid())
+  title        String
+  slug         String    @unique
+  content      String
+  excerpt      String?
+  coverImage   String?
+  published    Boolean   @default(false)
+  featured     Boolean   @default(false)
+  views        Int       @default(0)
+  readingTime  Int       @default(0) // in minutes
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  publishedAt  DateTime?
+  
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  ogImage         String?
+  
+  // Relations
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId   String
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?
+  tags       Tag[]
+  comments   Comment[]
+  likes      Like[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  // Relations
+  author   User?   @relation(fields: [authorId], references: [id])
+  authorId String?
+  post     Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   String
+  parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  parentId String?
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model Like {
+  id     String @id @default(cuid())
+  
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+  
+  @@unique([userId, postId])
+  @@map("likes")
+}
+
+model Photo {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  thumbnail   String?
+  category    PhotoCategory @default(CREATIVE)
+  tags        String[]
+  featured    Boolean     @default(false)
+  visible     Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("photos")
+}
+
+model Video {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  youtubeId   String        @unique
+  thumbnail   String?
+  category    VideoCategory @default(TECH)
+  tags        String[]
+  featured    Boolean       @default(false)
+  visible     Boolean       @default(true)
+  duration    Int?          // in seconds
+  views       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("videos")
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  content   Json     // Flexible JSON content for resume data
+  pdfUrl    String?
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("resumes")
+}
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  content     String   // Rich content/markdown
+  images      String[] // Array of image URLs
+  demoUrl     String?
+  githubUrl   String?
+  technologies String[] // Array of tech stack
+  category    String   @default("DevOps")
+  featured    Boolean  @default(false)
+  visible     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("portfolio_items")
+}
+
+model Ad {
+  id          String   @id @default(cuid())
+  name        String
+  content     String   // HTML/JS content
+  placement   AdPlacement @default(SIDEBAR)
+  active      Boolean  @default(false)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ads")
+}
+
+model Settings {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  type  SettingType @default(STRING)
+
+  @@map("settings")
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  event     String   // page_view, post_view, etc.
+  data      Json?    // Additional event data
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("analytics")
+}
+
+// Enums
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PhotoCategory {
+  NATURE
+  PORTRAIT
+  STREET
+  CREATIVE
+  ARCHITECTURE
+  TRAVEL
+}
+
+enum VideoCategory {
+  TECH
+  TUTORIAL
+  VLOG
+  TRAVEL
+  REVIEW
+}
+
+enum AdPlacement {
+  HEADER
+  SIDEBAR
+  FOOTER
+  POST_TOP
+  POST_MIDDLE
+  POST_BOTTOM
+}
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}

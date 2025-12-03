@@ -1,0 +1,573 @@
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { 
+  Video,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Heart,
+  Eye,
+  Calendar,
+  Filter,
+  Search,
+  ExternalLink,
+  Youtube,
+  Clock
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+
+// Mock video data - replace with actual API calls
+const categories = [
+  { name: "All", slug: "all", count: 24 },
+  { name: "Travel", slug: "travel", count: 8 },
+  { name: "Tech", slug: "tech", count: 6 },
+  { name: "Tutorials", slug: "tutorials", count: 5 },
+  { name: "Vlogs", slug: "vlogs", count: 5 }
+]
+
+const videos = [
+  {
+    id: "1",
+    title: "Building a Modern Website with Next.js 15",
+    description: "Complete tutorial on building a modern, responsive website using Next.js 15, TypeScript, and Tailwind CSS. We'll cover everything from setup to deployment.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "24:15",
+    category: "tech",
+    tags: ["nextjs", "typescript", "tailwind", "tutorial"],
+    featured: true,
+    createdAt: "2024-11-20",
+    likes: 1240,
+    views: 15420,
+    isYouTube: true
+  },
+  {
+    id: "2",
+    title: "Exploring Japan: Tokyo Street Photography",
+    description: "Join me as I explore the vibrant streets of Tokyo, capturing the essence of Japanese culture through photography and videography.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "18:32",
+    category: "travel",
+    tags: ["japan", "tokyo", "photography", "travel"],
+    featured: true,
+    createdAt: "2024-11-18",
+    likes: 856,
+    views: 12340,
+    isYouTube: true
+  },
+  {
+    id: "3",
+    title: "My Setup Tour 2024",
+    description: "Take a tour of my workspace and creative setup. From camera gear to coding environment, here's everything I use to create content.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "12:45",
+    category: "vlogs",
+    tags: ["setup", "workspace", "gear", "productivity"],
+    featured: false,
+    createdAt: "2024-11-15",
+    likes: 634,
+    views: 8950,
+    isYouTube: true
+  },
+  {
+    id: "4",
+    title: "React Hooks Explained",
+    description: "Deep dive into React Hooks - useState, useEffect, useContext and custom hooks. Perfect for beginners and intermediate developers.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "32:18",
+    category: "tutorials",
+    tags: ["react", "hooks", "javascript", "frontend"],
+    featured: true,
+    createdAt: "2024-11-12",
+    likes: 1820,
+    views: 25600,
+    isYouTube: true
+  },
+  {
+    id: "5",
+    title: "Weekend in the Swiss Alps",
+    description: "Beautiful cinematic shots from a weekend hiking trip in the Swiss Alps. Shot entirely with a gimbal and drone.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "8:24",
+    category: "travel",
+    tags: ["switzerland", "alps", "hiking", "cinematic"],
+    featured: false,
+    createdAt: "2024-11-10",
+    likes: 445,
+    views: 6780,
+    isYouTube: true
+  },
+  {
+    id: "6",
+    title: "Day in the Life of a Developer",
+    description: "Follow me through a typical day working remotely as a full-stack developer. From morning routine to evening wind-down.",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    thumbnail: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+    youtubeId: "dQw4w9WgXcQ",
+    duration: "15:30",
+    category: "vlogs",
+    tags: ["developer", "productivity", "remote work", "lifestyle"],
+    featured: false,
+    createdAt: "2024-11-08",
+    likes: 723,
+    views: 11200,
+    isYouTube: true
+  }
+]
+
+export default function VideosPage() {
+  const [selectedCategory, setSelectedCategory] = React.useState("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [filteredVideos, setFilteredVideos] = React.useState(videos)
+  const [selectedVideo, setSelectedVideo] = React.useState<typeof videos[0] | null>(null)
+  const [isPlaying, setIsPlaying] = React.useState<{[key: string]: boolean}>({})
+
+  // Filter videos based on search and category
+  React.useEffect(() => {
+    let filtered = videos
+
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(video => video.category === selectedCategory)
+    }
+
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(video => 
+        video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    }
+
+    setFilteredVideos(filtered)
+  }, [searchQuery, selectedCategory])
+
+  const openVideoModal = (video: typeof videos[0]) => {
+    setSelectedVideo(video)
+  }
+
+  const closeVideoModal = () => {
+    setSelectedVideo(null)
+  }
+
+  const featuredVideos = videos.filter(video => video.featured).slice(0, 3)
+
+  const formatDuration = (duration: string) => {
+    return duration
+  }
+
+  const formatViews = (views: number) => {
+    if (views >= 1000000) {
+      return Math.floor(views / 100000) / 10 + 'M'
+    } else if (views >= 1000) {
+      return Math.floor(views / 100) / 10 + 'K'
+    }
+    return views.toString()
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header Section */}
+      <section className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-16">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-4xl mx-auto"
+          >
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Video className="h-8 w-8 text-blue-600" />
+              <h1 className="text-4xl md:text-6xl font-bold">
+                Video Gallery
+              </h1>
+            </div>
+            <p className="text-xl text-muted-foreground mb-8">
+              Tutorials, vlogs, and creative content. Watch my latest videos 
+              covering tech, travel, and everything in between.
+            </p>
+            
+            {/* Search Bar */}
+            <div className="relative max-w-md mx-auto mb-8">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search videos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-md mx-auto">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{videos.length}</div>
+                <div className="text-sm text-muted-foreground">Videos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-indigo-600">80K+</div>
+                <div className="text-sm text-muted-foreground">Total Views</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">5.2K+</div>
+                <div className="text-sm text-muted-foreground">Subscribers</div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Featured Videos */}
+      {selectedCategory === "all" && !searchQuery && (
+        <section className="py-12 bg-muted/50">
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h2 className="text-2xl font-bold mb-6 text-center">Featured Videos</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                {featuredVideos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="group cursor-pointer"
+                    onClick={() => openVideoModal(video)}
+                  >
+                    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300">
+                      <div className="aspect-video relative overflow-hidden">
+                        <img
+                          src={video.thumbnail}
+                          alt={video.title}
+                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                            <Play className="h-8 w-8 text-white fill-white" />
+                          </div>
+                        </div>
+                        
+                        {/* Duration Badge */}
+                        <Badge className="absolute bottom-2 right-2 bg-black/70 text-white">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {video.duration}
+                        </Badge>
+
+                        {/* Featured Badge */}
+                        <Badge className="absolute top-2 left-2 bg-blue-600">
+                          Featured
+                        </Badge>
+
+                        {/* YouTube Badge */}
+                        {video.isYouTube && (
+                          <Badge className="absolute top-2 right-2 bg-red-600">
+                            <Youtube className="h-3 w-3 mr-1" />
+                            YouTube
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2 line-clamp-2">{video.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          {video.description}
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(video.createdAt).toLocaleDateString()}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-3 w-3" />
+                              {video.likes}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {formatViews(video.views)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Main Video Gallery */}
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          {/* Controls */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            {/* Category Filter */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <Button
+                  key={category.slug}
+                  variant={selectedCategory === category.slug ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.slug)}
+                  className="flex items-center gap-1"
+                >
+                  <Filter className="h-3 w-3" />
+                  {category.name}
+                  <Badge variant="secondary" className="text-xs">
+                    {category.count}
+                  </Badge>
+                </Button>
+              ))}
+            </div>
+
+            {/* YouTube Channel Link */}
+            <Button variant="outline" asChild>
+              <Link href="https://youtube.com/@omthakur" target="_blank">
+                <Youtube className="mr-2 h-4 w-4" />
+                YouTube Channel
+                <ExternalLink className="ml-2 h-3 w-3" />
+              </Link>
+            </Button>
+          </div>
+
+          {/* Video Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVideos.map((video, index) => (
+              <motion.div
+                key={video.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="group cursor-pointer"
+                onClick={() => openVideoModal(video)}
+              >
+                <Card className="overflow-hidden hover:shadow-lg transition-all duration-300">
+                  <div className="aspect-video relative overflow-hidden">
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform duration-300">
+                        <Play className="h-6 w-6 text-white fill-white" />
+                      </div>
+                    </div>
+                    
+                    {/* Duration Badge */}
+                    <Badge className="absolute bottom-2 right-2 bg-black/70 text-white text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {video.duration}
+                    </Badge>
+
+                    {/* Category Badge */}
+                    <Badge 
+                      className="absolute top-2 left-2 text-xs"
+                      variant={video.category === 'tech' ? 'default' : 
+                               video.category === 'travel' ? 'secondary' : 
+                               video.category === 'tutorials' ? 'outline' : 'destructive'}
+                    >
+                      {video.category}
+                    </Badge>
+
+                    {/* YouTube Badge */}
+                    {video.isYouTube && (
+                      <Badge className="absolute top-2 right-2 bg-red-600 text-xs">
+                        <Youtube className="h-3 w-3" />
+                      </Badge>
+                    )}
+
+                    {video.featured && (
+                      <Badge className="absolute top-8 left-2 bg-blue-600 text-xs">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-2 line-clamp-2">{video.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {video.description}
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {video.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(video.createdAt).toLocaleDateString()}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-3 w-3" />
+                          {video.likes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {formatViews(video.views)}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* No Results */}
+          {filteredVideos.length === 0 && (
+            <div className="text-center py-12">
+              <Video className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No videos found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your search or filter criteria
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("")
+                  setSelectedCategory("all")
+                }}
+              >
+                Clear filters
+              </Button>
+            </div>
+          )}
+
+          {/* Load More */}
+          {filteredVideos.length > 0 && (
+            <div className="text-center mt-12">
+              <Button variant="outline" size="lg">
+                Load More Videos
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Video Modal */}
+      {selectedVideo && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={closeVideoModal}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="relative max-w-6xl w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Video Player */}
+            <div className="aspect-video">
+              <iframe
+                src={`${selectedVideo.videoUrl}?autoplay=1`}
+                title={selectedVideo.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+            
+            {/* Video Info */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <h2 className="text-2xl font-bold mb-2">{selectedVideo.title}</h2>
+                  <p className="text-muted-foreground mb-4">{selectedVideo.description}</p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedVideo.tags.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Heart className="h-4 w-4" />
+                      {selectedVideo.likes} likes
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      {formatViews(selectedVideo.views)} views
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(selectedVideo.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {selectedVideo.duration}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button size="sm">
+                      <Heart className="mr-2 h-4 w-4" />
+                      Like
+                    </Button>
+                    {selectedVideo.isYouTube && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`https://youtube.com/watch?v=${selectedVideo.youtubeId}`} target="_blank">
+                          <Youtube className="mr-2 h-4 w-4" />
+                          YouTube
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-2">Category</h4>
+                    <Badge className="capitalize">{selectedVideo.category}</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute top-4 right-4 bg-white/20 border-white/30 text-white hover:bg-white/30"
+              onClick={closeVideoModal}
+            >
+              ×
+            </Button>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  )
+}
