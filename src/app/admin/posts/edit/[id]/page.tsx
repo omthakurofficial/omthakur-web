@@ -165,7 +165,14 @@ export default function PostEditorPage() {
     excerpt: "",
     content: "",
     published: false,
-    featured: false
+    featured: false,
+    coverImage: "",
+    category: "",
+    tags: "",
+    status: "draft",
+    publishedAt: "",
+    metaDescription: "",
+    metaKeywords: ""
   })
 
   useEffect(() => {
@@ -188,6 +195,13 @@ export default function PostEditorPage() {
             slug: foundPost.slug || "",
             excerpt: foundPost.excerpt || "",
             content: foundPost.content || "",
+            coverImage: foundPost.coverImage || "",
+            category: foundPost.category || "",
+            tags: foundPost.tags || "",
+            status: foundPost.status || "draft",
+            publishedAt: foundPost.publishedAt || "",
+            metaDescription: foundPost.metaDescription || "",
+            metaKeywords: foundPost.metaKeywords || "",
             published: foundPost.published || false,
             featured: foundPost.featured || false
           })
@@ -654,7 +668,7 @@ export default function PostEditorPage() {
               <CardContent className="space-y-3">
                 <Button 
                   className="w-full justify-start"
-                  onClick={() => handleSave('publish')}
+                  onClick={() => handleSave()}
                   disabled={isLoading}
                 >
                   <Globe className="mr-2 h-4 w-4" />
@@ -663,7 +677,7 @@ export default function PostEditorPage() {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => handleSave('schedule')}
+                  onClick={() => handleSave()}
                   disabled={isLoading}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
@@ -672,7 +686,7 @@ export default function PostEditorPage() {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => handleSave('draft')}
+                  onClick={() => handleSave()}
                   disabled={isLoading}
                 >
                   <FileText className="mr-2 h-4 w-4" />
@@ -709,7 +723,7 @@ export default function PostEditorPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {formData.tags.split(',').map((tag, index) => (
+                  {formData.tags.split(',').map((tag: string, index: number) => (
                     tag.trim() && (
                       <Badge key={index} variant="outline">
                         {tag.trim()}

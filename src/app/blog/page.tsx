@@ -94,7 +94,7 @@ export default function BlogPage() {
           const categoryCount = { all: data.posts.length }
           setCategories(prev => prev.map(cat => ({
             ...cat,
-            count: cat.slug === 'all' ? data.posts.length : categoryCount[cat.slug] || 0
+            count: cat.slug === 'all' ? data.posts.length : (categoryCount as any)[cat.slug] || 0
           })))
         } else {
           setPosts([])
