@@ -340,7 +340,7 @@ export default function PostEditorPage() {
               <div>
                 <h1 className="text-xl font-bold">Edit Post</h1>
                 <p className="text-sm text-muted-foreground">
-                  Last saved: {formatDate(mockPost.createdAt)}
+                  Last saved: {formatDate(mockPost.created_at)}
                 </p>
               </div>
             </div>
