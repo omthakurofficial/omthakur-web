@@ -354,7 +354,7 @@ export default function PostEditorPage() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => handleSave('draft')}
+                onClick={() => handleSave()}
                 disabled={isLoading}
               >
                 <Save className="mr-2 h-4 w-4" />
@@ -362,7 +362,7 @@ export default function PostEditorPage() {
               </Button>
               <Button 
                 size="sm"
-                onClick={() => handleSave('publish')}
+                onClick={() => handleSave()}
                 disabled={isLoading}
               >
                 {isLoading ? (
