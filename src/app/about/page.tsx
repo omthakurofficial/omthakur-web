@@ -144,13 +144,11 @@ export default function AboutPage() {
             </div>
             <div className="relative">
               <div className="relative w-full max-w-md mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-2xl opacity-20"></div>
-                <Image
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-20"></div>
+                <img
                   src="https://images.pexels.com/photos/33059766/pexels-photo-33059766.png"
                   alt="Om Thakur"
-                  width={400}
-                  height={400}
-                  className="relative rounded-full shadow-2xl object-cover"
+                  className="relative w-80 h-80 rounded-full shadow-2xl object-cover mx-auto border-4 border-white"
                 />
               </div>
             </div>

@@ -156,7 +156,7 @@ export function Footer() {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t pt-8 mt-8">
+        {/* <div className="border-t pt-8 mt-8">
           <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-1 text-sm text-muted-foreground">
               <span>© {currentYear} Om Thakur. Made with</span>
@@ -185,11 +185,11 @@ export function Footer() {
               </Link>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Newsletter Section */}
-      <div className="bg-muted py-8">
+      {/* <div className="bg-muted py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center space-y-4">
             <h3 className="font-semibold text-lg">Stay Updated</h3>
@@ -208,7 +208,7 @@ export function Footer() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </footer>
   )
 }
