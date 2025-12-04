@@ -33,37 +33,37 @@ const socialLinks = [
   { 
     name: "Facebook", 
     icon: Facebook, 
-    href: "https://facebook.com/omthakur",
+    href: "https://facebook.com/omthakurofficial",
     color: "hover:text-blue-600"
   },
   { 
     name: "Twitter", 
     icon: Twitter, 
-    href: "https://twitter.com/omthakur",
+    href: "https://twitter.com/omthakurofficial",
     color: "hover:text-sky-500"
   },
   { 
     name: "Instagram", 
     icon: Instagram, 
-    href: "https://instagram.com/omthakur",
+    href: "https://instagram.com/omthakur_official",
     color: "hover:text-pink-600"
   },
   { 
     name: "LinkedIn", 
     icon: Linkedin, 
-    href: "https://linkedin.com/in/omthakur",
+    href: "https://linkedin.com/in/omthakurofficial",
     color: "hover:text-blue-700"
   },
   { 
     name: "YouTube", 
     icon: Youtube, 
-    href: "https://youtube.com/@omthakur",
+    href: "https://youtube.com/@omthakurofficial",
     color: "hover:text-red-600"
   },
   { 
     name: "GitHub", 
     icon: Github, 
-    href: "https://github.com/omthakur",
+    href: "https://github.com/omprakashthakur4",
     color: "hover:text-gray-800 dark:hover:text-gray-200"
   }
 ]
@@ -142,11 +142,11 @@ export function Footer() {
             <h3 className="font-semibold text-lg">Get In Touch</h3>
             <div className="space-y-2">
               <a 
-                href="mailto:hello@omthakur.com"
+                href="mailto:omthakurofficial@gmail.com"
                 className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4" />
-                <span>hello@omthakur.com</span>
+                <span>omthakurofficial@gmail.com</span>
               </a>
               <p className="text-sm text-muted-foreground">
                 Available for consulting, training, and collaboration opportunities.
