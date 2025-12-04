@@ -15,7 +15,8 @@ import {
   Download,
   Mail,
   MapPin,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -23,39 +24,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Sidebar } from "@/components/layout/sidebar"
 
-// Mock data - replace with real data from your API
-const featuredPosts = [
-  {
-    id: "1",
-    title: "Complete Guide to AWS EKS: From Setup to Production",
-    excerpt: "Learn how to set up and manage a production-ready Kubernetes cluster on AWS EKS with best practices and security considerations.",
-    coverImage: "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=500",
-    category: "DevOps",
-    publishedAt: "2024-11-20",
-    readingTime: 8,
-    slug: "complete-guide-aws-eks"
-  },
-  {
-    id: "2",
-    title: "Docker Multi-Stage Builds: Optimize Your Container Images",
-    excerpt: "Discover how to create smaller, more secure Docker images using multi-stage builds and advanced optimization techniques.",
-    coverImage: "https://images.unsplash.com/photo-1605745341112-85968b19335a?w=500",
-    category: "Containers",
-    publishedAt: "2024-11-18",
-    readingTime: 6,
-    slug: "docker-multi-stage-builds"
-  },
-  {
-    id: "3",
-    title: "CI/CD Best Practices with GitHub Actions",
-    excerpt: "Build robust CI/CD pipelines using GitHub Actions with advanced workflows, security scanning, and deployment strategies.",
-    coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=500",
-    category: "CI/CD",
-    publishedAt: "2024-11-15",
-    readingTime: 10,
-    slug: "cicd-github-actions"
-  }
-]
+// Types
+interface Post {
+  id: string
+  title: string
+  slug: string
+  excerpt?: string
+  cover_image?: string
+  published: boolean
+  featured: boolean
+  views: number
+  reading_time: number
+  published_at?: string
+  created_at: string
+}
 
 const quickStats = [
   { label: "Articles Written", value: "50+" },
@@ -65,6 +47,64 @@ const quickStats = [
 ]
 
 export default function HomePage() {
+  const [featuredPosts, setFeaturedPosts] = React.useState<Post[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  // Fetch featured posts from API
+  React.useEffect(() => {
+    async function fetchFeaturedPosts() {
+      try {
+        setLoading(true)
+        
+        // Fetch published posts only, limit to 3 for homepage
+        const response = await fetch('/api/posts-crud?all=false')
+        if (!response.ok) {
+          throw new Error('Failed to fetch posts')
+        }
+        
+        const data = await response.json()
+        
+        if (data.posts) {
+          // Take first 3 posts for homepage display
+          setFeaturedPosts(data.posts.slice(0, 3))
+        }
+      } catch (error) {
+        console.error('Error fetching featured posts:', error)
+        setFeaturedPosts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFeaturedPosts()
+  }, [])
+
+  // Helper function to get default cover image
+  const getDefaultCoverImage = (title: string) => {
+    const hash = title.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0)
+      return a & a
+    }, 0)
+    
+    const images = [
+      'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=500&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1605745341112-85968b19335a?w=500&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=500&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=500&h=300&fit=crop'
+    ]
+    
+    return images[Math.abs(hash) % images.length]
+  }
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -249,44 +289,64 @@ export default function HomePage() {
                 </Link>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {featuredPosts.map((post, index) => (
-                  <motion.div
-                    key={post.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                  >
-                    <Link href={`/blog/${post.slug}`}>
-                      <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                        <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                          <img
-                            src={post.coverImage}
-                            alt={post.title}
-                            className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
-                          />
-                          <Badge className="absolute top-4 left-4">{post.category}</Badge>
-                        </div>
-                        <CardHeader>
-                          <CardTitle className="line-clamp-2 hover:text-primary transition-colors">
-                            {post.title}
-                          </CardTitle>
-                          <CardDescription className="line-clamp-3">
-                            {post.excerpt}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
-                            <span>{post.readingTime} min read</span>
+              {/* Loading State */}
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin mr-2" />
+                  <span>Loading latest articles...</span>
+                </div>
+              ) : featuredPosts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {featuredPosts.map((post, index) => (
+                    <motion.div
+                      key={post.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      viewport={{ once: true }}
+                    >
+                      <Link href={`/blog/${post.slug}`}>
+                        <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                          <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                            <img
+                              src={post.cover_image || getDefaultCoverImage(post.title)}
+                              alt={post.title}
+                              className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                            />
+                            <Badge className="absolute top-4 left-4 bg-blue-600">DevOps</Badge>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <CardHeader>
+                            <CardTitle className="line-clamp-2 hover:text-primary transition-colors">
+                              {post.title}
+                            </CardTitle>
+                            <CardDescription className="line-clamp-3">
+                              {post.excerpt || 'Read this amazing article...'}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>{formatDate(post.published_at || post.created_at)}</span>
+                              <span>{post.reading_time || 5} min read</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <CardContent>
+                    <h3 className="text-xl font-semibold mb-2">No Articles Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      I haven't published any articles yet. Check back soon for amazing content!
+                    </p>
+                    <Link href="/admin/posts/new">
+                      <Button>Create First Article</Button>
                     </Link>
-                  </motion.div>
-                ))}
-              </div>
+                  </CardContent>
+                </Card>
+              )}
             </motion.section>
 
             {/* Quick Links Section */}

@@ -42,31 +42,16 @@ interface BlogPost {
   featured: boolean;
   created_at: string;
   updated_at: string;
+  cover_image?: string;
+  reading_time?: number;
+  published_at?: string;
 }
-
-const relatedPosts = [
-  {
-    id: "2",
-    title: "Docker Multi-Stage Builds: Optimize Your Container Images",
-    slug: "docker-multi-stage-builds",
-    coverImage: "https://images.unsplash.com/photo-1605745341112-85968b19335a?w=400",
-    publishedAt: "2024-11-18",
-    readingTime: 6
-  },
-  {
-    id: "3",
-    title: "CI/CD Best Practices with GitHub Actions",
-    slug: "cicd-github-actions",
-    coverImage: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400",
-    publishedAt: "2024-11-15",
-    readingTime: 10
-  }
-]
 
 export default function BlogPostPage({ params }: Props) {
   const [showScrollToTop, setShowScrollToTop] = React.useState(false)
   const [liked, setLiked] = React.useState(false)
   const [blogPost, setBlogPost] = useState<BlogPost | null>(null)
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,6 +74,56 @@ export default function BlogPostPage({ params }: Props) {
 
     fetchPost()
   }, [params.slug])
+
+  // Fetch related posts
+  useEffect(() => {
+    const fetchRelatedPosts = async () => {
+      try {
+        const response = await fetch('/api/posts-crud?all=false')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.posts) {
+            // Filter out current post and take 2 related posts
+            const filtered = data.posts
+              .filter((post: BlogPost) => post.slug !== params.slug)
+              .slice(0, 2)
+            setRelatedPosts(filtered)
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching related posts:', err)
+      }
+    }
+
+    fetchRelatedPosts()
+  }, [params.slug])
+
+  // Helper function to get default cover image
+  const getDefaultCoverImage = (title: string) => {
+    const hash = title.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0)
+      return a & a
+    }, 0)
+    
+    const images = [
+      'https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=400&h=250&fit=crop',
+      'https://images.unsplash.com/photo-1605745341112-85968b19335a?w=400&h=250&fit=crop',
+      'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&h=250&fit=crop',
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=250&fit=crop',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=250&fit=crop'
+    ]
+    
+    return images[Math.abs(hash) % images.length]
+  }
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -343,33 +378,44 @@ export default function BlogPostPage({ params }: Props) {
               {/* Related Posts */}
               <section className="mt-12">
                 <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {relatedPosts.map((post) => (
-                    <Card key={post.id} className="hover:shadow-lg transition-shadow">
-                      <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                        <img
-                          src={post.coverImage}
-                          alt={post.title}
-                          className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <CardHeader>
-                        <CardTitle className="line-clamp-2 hover:text-primary transition-colors">
-                          <Link href={`/blog/${post.slug}`}>
-                            {post.title}
-                          </Link>
-                        </CardTitle>
-                        <CardDescription>
-                          <div className="flex items-center gap-2 text-sm">
-                            <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
-                            <span>•</span>
-                            <span>{post.readingTime} min read</span>
-                          </div>
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
+                {relatedPosts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {relatedPosts.map((post) => (
+                      <Card key={post.id} className="hover:shadow-lg transition-shadow">
+                        <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                          <img
+                            src={post.cover_image || getDefaultCoverImage(post.title)}
+                            alt={post.title}
+                            className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <CardHeader>
+                          <CardTitle className="line-clamp-2 hover:text-primary transition-colors">
+                            <Link href={`/blog/${post.slug}`}>
+                              {post.title}
+                            </Link>
+                          </CardTitle>
+                          <CardDescription>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span>{formatDate(post.published_at || post.created_at)}</span>
+                              <span>•</span>
+                              <span>{post.reading_time || 5} min read</span>
+                            </div>
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No related articles found.</p>
+                    <Link href="/blog">
+                      <Button variant="outline" className="mt-4">
+                        View All Articles
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </section>
 
               {/* Navigation */}

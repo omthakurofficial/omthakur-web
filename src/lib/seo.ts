@@ -127,7 +127,7 @@ export const personStructuredData = generateStructuredData({
   jobTitle: 'Full Stack Developer',
   description: 'Full Stack Developer and Tech Content Creator specializing in modern web development, photography, and technical writing.',
   url: baseUrl,
-  image: `${baseUrl}/images/om-thakur.jpg`,
+  image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
   sameAs: [
     'https://github.com/omthakur',
     'https://linkedin.com/in/omthakur',

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
@@ -27,43 +28,20 @@ interface SidebarProps {
   className?: string
 }
 
-// Mock data - in a real app, this would come from your API
-const categories = [
-  { name: "Technology", count: 25, slug: "technology" },
-  { name: "DevOps", count: 18, slug: "devops" },
-  { name: "Cloud Computing", count: 15, slug: "cloud-computing" },
-  { name: "Web Development", count: 12, slug: "web-development" },
-  { name: "Tutorials", count: 8, slug: "tutorials" },
-]
+// Types for real data
+interface Category {
+  name: string
+  count: number
+  slug: string
+}
 
-const popularTags = [
-  "AWS", "Docker", "Kubernetes", "React", "Next.js", "TypeScript", 
-  "Linux", "CI/CD", "Terraform", "Node.js", "Python", "DevOps"
-]
-
-const popularPosts = [
-  {
-    id: "1",
-    title: "Complete Guide to AWS EKS",
-    slug: "complete-guide-aws-eks",
-    views: 1250,
-    date: "2024-11-15"
-  },
-  {
-    id: "2", 
-    title: "Docker Best Practices for Production",
-    slug: "docker-best-practices-production",
-    views: 980,
-    date: "2024-11-10"
-  },
-  {
-    id: "3",
-    title: "Building CI/CD with GitHub Actions",
-    slug: "building-cicd-github-actions",
-    views: 750,
-    date: "2024-11-05"
-  }
-]
+interface PopularPost {
+  id: string
+  title: string
+  slug: string
+  views: number
+  created_at: string
+}
 
 const socialLinks = [
   { name: "Facebook", icon: Facebook, url: "#", color: "text-blue-600" },
@@ -75,7 +53,77 @@ const socialLinks = [
 ]
 
 export function Sidebar({ className }: SidebarProps) {
-  const [email, setEmail] = React.useState("")
+  const [email, setEmail] = useState("")
+  const [categories, setCategories] = useState<Category[]>([])
+  const [popularPosts, setPopularPosts] = useState<PopularPost[]>([])
+  const [popularTags, setPopularTags] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch real data
+  useEffect(() => {
+    const fetchSidebarData = async () => {
+      try {
+        // Fetch posts for generating categories and popular posts
+        const postsResponse = await fetch('/api/posts-crud?all=true')
+        if (postsResponse.ok) {
+          const postsData = await postsResponse.json()
+          const posts = postsData.posts || []
+          
+          // Generate categories from posts (you could also have a dedicated categories API)
+          const categoryMap = new Map()
+          const allTags = new Set<string>()
+          
+          posts.forEach((post: any) => {
+            // Assuming posts have a category field
+            const category = post.category || 'General'
+            categoryMap.set(category, (categoryMap.get(category) || 0) + 1)
+            
+            // Collect tags if they exist
+            if (post.tags && Array.isArray(post.tags)) {
+              post.tags.forEach((tag: string) => allTags.add(tag))
+            }
+          })
+          
+          // Convert category map to array
+          const categoriesArray = Array.from(categoryMap.entries()).map(([name, count]) => ({
+            name,
+            count,
+            slug: name.toLowerCase().replace(/\s+/g, '-')
+          }))
+          
+          // Sort by count and take top categories
+          setCategories(categoriesArray.sort((a, b) => b.count - a.count).slice(0, 8))
+          
+          // Set popular tags (first 12)
+          setPopularTags(Array.from(allTags).slice(0, 12))
+          
+          // Set popular posts (sorted by views or recent)
+          const sortedPosts = posts
+            .sort((a: any, b: any) => (b.views || 0) - (a.views || 0))
+            .slice(0, 5)
+            .map((post: any) => ({
+              id: post.id,
+              title: post.title,
+              slug: post.slug,
+              views: post.views || 0,
+              created_at: post.created_at
+            }))
+          
+          setPopularPosts(sortedPosts)
+        }
+      } catch (error) {
+        console.error('Error fetching sidebar data:', error)
+        // Set fallbacks
+        setCategories([])
+        setPopularPosts([])
+        setPopularTags([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSidebarData()
+  }, [])
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,18 +147,33 @@ export function Sidebar({ className }: SidebarProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {categories.map((category) => (
-            <Link
-              key={category.slug}
-              href={`/blog?category=${category.slug}`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
-            >
-              <span className="text-sm">{category.name}</span>
-              <Badge variant="secondary" className="text-xs">
-                {category.count}
-              </Badge>
-            </Link>
-          ))}
+          {loading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-2">
+                  <div className="h-4 bg-muted animate-pulse rounded w-2/3"></div>
+                  <div className="h-5 bg-muted animate-pulse rounded w-8"></div>
+                </div>
+              ))}
+            </div>
+          ) : categories.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No categories found
+            </p>
+          ) : (
+            categories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/blog?category=${category.slug}`}
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                <span className="text-sm">{category.name}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {category.count}
+                </Badge>
+              </Link>
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -123,18 +186,30 @@ export function Sidebar({ className }: SidebarProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {popularTags.map((tag) => (
-              <Link key={tag} href={`/blog?tag=${tag.toLowerCase()}`}>
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover:bg-accent transition-colors"
-                >
-                  {tag}
-                </Badge>
-              </Link>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex flex-wrap gap-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="h-6 bg-muted animate-pulse rounded w-16"></div>
+              ))}
+            </div>
+          ) : popularTags.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No tags found
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {popularTags.map((tag) => (
+                <Link key={tag} href={`/blog?tag=${tag.toLowerCase()}`}>
+                  <Badge 
+                    variant="outline" 
+                    className="cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    {tag}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -147,30 +222,48 @@ export function Sidebar({ className }: SidebarProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {popularPosts.map((post, index) => (
-            <Link
-              key={post.id}
-              href={`/blog/${post.slug}`}
-              className="block p-2 rounded-lg hover:bg-accent transition-colors"
-            >
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-primary text-lg">
-                  {index + 1}
-                </span>
-                <div className="flex-1">
-                  <h4 className="text-sm font-medium line-clamp-2 mb-1">
-                    {post.title}
-                  </h4>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(post.date).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span>{post.views} views</span>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-start gap-2 p-2">
+                  <div className="h-6 w-6 bg-muted animate-pulse rounded"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
+                    <div className="h-3 bg-muted animate-pulse rounded w-2/3"></div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              ))}
+            </div>
+          ) : popularPosts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No popular posts yet
+            </p>
+          ) : (
+            popularPosts.map((post, index) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="block p-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-primary text-lg">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium line-clamp-2 mb-1">
+                      {post.title}
+                    </h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{post.views} views</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))
+          )}
         </CardContent>
       </Card>
 

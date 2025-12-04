@@ -41,12 +41,19 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-// Mock post data for editing
-const mockPost = {
-  id: "1",
-  title: "Building Modern Web Applications with Next.js 15",
-  slug: "building-modern-web-apps-nextjs-15",
-  excerpt: "Learn how to build performant, modern web applications using Next.js 15 with all the latest features.",
+// Types for post data
+interface Post {
+  id: string
+  title: string
+  slug: string
+  excerpt?: string
+  content: string
+  is_published: boolean
+  featured: boolean
+  image_url?: string
+  created_at: string
+  updated_at: string
+}
   content: `# Building Modern Web Applications with Next.js 15
 
 Next.js 15 introduces several groundbreaking features that make building modern web applications easier and more efficient than ever before.
