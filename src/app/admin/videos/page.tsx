@@ -83,15 +83,26 @@ export default function AdminVideosPage() {
   const fetchVideos = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/videos')
+      let response = await fetch('/api/videos')
+      
+      // If Prisma fails, try Supabase API with admin flag
+      if (!response.ok) {
+        console.log('Prisma API failed, trying Supabase API...')
+        response = await fetch('/api/videos-supabase?admin=true')
+      }
+      
       if (response.ok) {
         const data = await response.json()
-        setVideos(data.videos || [])
+        const videosData = data.videos || []
+        setVideos(videosData)
+        console.log(`Loaded ${videosData.length} videos`)
       } else {
         console.error('Failed to fetch videos')
+        setVideos([])
       }
     } catch (error) {
       console.error('Error fetching videos:', error)
+      setVideos([])
     } finally {
       setIsLoading(false)
     }
@@ -103,13 +114,23 @@ export default function AdminVideosPage() {
     }
 
     try {
-      const response = await fetch(`/api/videos/${videoId}`, {
+      // Try Supabase API first
+      let response = await fetch(`/api/videos-supabase/${videoId}`, {
         method: 'DELETE'
       })
+
+      // If Supabase fails, try Prisma API
+      if (!response.ok) {
+        response = await fetch(`/api/videos/${videoId}`, {
+          method: 'DELETE'
+        })
+      }
 
       if (response.ok) {
         setVideos(prev => prev.filter(v => v.id !== videoId))
         alert('Video deleted successfully!')
+        // Refresh the videos list
+        fetchVideos()
       } else {
         alert('Failed to delete video')
       }
@@ -272,7 +293,14 @@ export default function AdminVideosPage() {
                             target.src = '/images/placeholder-video.jpg'
                           }}
                         />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {/* Play button background overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-12 h-12 bg-black/70 rounded-full flex items-center justify-center">
+                            <Play className="h-6 w-6 text-white ml-1" />
+                          </div>
+                        </div>
+                        {/* Action buttons overlay */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10">
                           <Button size="sm" variant="secondary" asChild>
                             <Link href={`/admin/videos/edit/${video.id}`}>
                               <Edit className="h-4 w-4" />
@@ -307,11 +335,6 @@ export default function AdminVideosPage() {
                               Draft
                             </Badge>
                           )}
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-12 h-12 bg-black/70 rounded-full flex items-center justify-center">
-                            <Play className="h-6 w-6 text-white ml-1" />
-                          </div>
                         </div>
                       </div>
                       <CardContent className="p-4">

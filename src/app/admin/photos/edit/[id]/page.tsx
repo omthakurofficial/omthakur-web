@@ -1,25 +1,18 @@
 "use client"
 
 import * as React from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
-  Upload, 
-  Image, 
   Save, 
   ArrowLeft, 
   Camera,
-  MapPin,
-  Calendar,
-  Tag,
   Star,
   Eye,
   EyeOff,
   ExternalLink,
-  Search,
-  Download,
-  Check,
-  Copy
+  Loader2
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -45,8 +38,14 @@ const photoCategories = [
   { name: "Travel", value: "TRAVEL" }
 ]
 
-export default function NewPhotoPage() {
-  const [isLoading, setIsLoading] = React.useState(false)
+export default function EditPhotoPage() {
+  const params = useParams()
+  const router = useRouter()
+  const photoId = params.id as string
+  
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isSaving, setIsSaving] = React.useState(false)
+  const [photo, setPhoto] = React.useState<any>(null)
   const [formData, setFormData] = React.useState({
     title: "",
     description: "",
@@ -59,6 +58,51 @@ export default function NewPhotoPage() {
   
   const [urlError, setUrlError] = React.useState("")
   const [isValidatingUrl, setIsValidatingUrl] = React.useState(false)
+
+  // Fetch photo data
+  React.useEffect(() => {
+    if (photoId) {
+      fetchPhoto()
+    }
+  }, [photoId])
+
+  const fetchPhoto = async () => {
+    setIsLoading(true)
+    try {
+      let response = await fetch(`/api/photos-supabase/${photoId}`)
+      
+      // If Supabase fails, try Prisma API
+      if (!response.ok) {
+        response = await fetch(`/api/photos/${photoId}`)
+      }
+      
+      if (response.ok) {
+        const photoData = await response.json()
+        setPhoto(photoData)
+        
+        // Populate form with existing data
+        setFormData({
+          title: photoData.title || "",
+          description: photoData.description || "",
+          image_url: (photoData.imageUrl || photoData.image_url) || "",
+          category: photoData.category?.toUpperCase() || "NATURE",
+          tags: Array.isArray(photoData.tags) ? photoData.tags.join(", ") : "",
+          featured: photoData.featured || false,
+          visible: photoData.visible !== false
+        })
+      } else {
+        console.error('Failed to fetch photo')
+        alert('Photo not found')
+        router.push('/admin/photos')
+      }
+    } catch (error) {
+      console.error('Error fetching photo:', error)
+      alert('Error loading photo')
+      router.push('/admin/photos')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -74,27 +118,15 @@ export default function NewPhotoPage() {
     
     setIsValidatingUrl(true)
     try {
-      // Check if it's a valid URL format
       const urlObj = new URL(url)
       if (!['http:', 'https:'].includes(urlObj.protocol)) {
         throw new Error('URL must start with http:// or https://')
       }
 
-      // Try to load the image to validate it
       return new Promise((resolve) => {
         const img = new window.Image()
         img.onload = () => {
           setUrlError("")
-          
-          // Auto-extract title from URL if title is empty
-          if (!formData.title) {
-            const filename = url.split('/').pop()?.split('?')[0]?.replace(/\.[^.]+$/, '') || ''
-            const cleanTitle = filename.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-            if (cleanTitle) {
-              handleInputChange('title', cleanTitle)
-            }
-          }
-          
           resolve(true)
         }
         img.onerror = () => {
@@ -113,57 +145,44 @@ export default function NewPhotoPage() {
 
   const handleUrlChange = async (url: string) => {
     handleInputChange('image_url', url)
-    if (url) {
+    if (url && url !== (photo?.imageUrl || photo?.image_url)) {
       await validateImageUrl(url)
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // In a real app, you'd upload to cloud storage
-      const imageUrl = URL.createObjectURL(file)
-      handleInputChange('image_url', imageUrl)
-      
-      // Auto-fill title from filename if empty
-      if (!formData.title) {
-        const filename = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ')
-        handleInputChange('title', filename)
-      }
-    }
-  }
-
   const handleSave = async () => {
-    setIsLoading(true)
+    setIsSaving(true)
     
     if (!formData.title.trim()) {
       alert('Please enter a title')
-      setIsLoading(false)
+      setIsSaving(false)
       return
     }
 
     if (!formData.image_url.trim()) {
-      alert('Please upload or enter an image URL')
-      setIsLoading(false)
+      alert('Please enter an image URL')
+      setIsSaving(false)
       return
     }
 
     try {
-      // First validate the image URL
-      const isValidUrl = await validateImageUrl(formData.image_url)
-      if (!isValidUrl) {
-        setIsLoading(false)
-        return
+      // Validate URL if it changed
+      if (formData.image_url !== (photo?.imageUrl || photo?.image_url)) {
+        const isValidUrl = await validateImageUrl(formData.image_url)
+        if (!isValidUrl) {
+          setIsSaving(false)
+          return
+        }
       }
 
-      // Try Supabase API first (since Prisma is having connection issues)
-      let response = await fetch('/api/photos-supabase', {
-        method: 'POST',
+      // Try Supabase API first
+      let response = await fetch(`/api/photos-supabase/${photoId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          image_url: formData.image_url, // Use snake_case for Supabase
+          image_url: formData.image_url,
           thumbnail: formData.image_url,
           category: formData.category,
           tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
@@ -174,13 +193,13 @@ export default function NewPhotoPage() {
       
       // If Supabase fails, try Prisma API
       if (!response.ok) {
-        response = await fetch('/api/photos', {
-          method: 'POST',
+        response = await fetch(`/api/photos/${photoId}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: formData.title,
             description: formData.description,
-            imageUrl: formData.image_url, // Use camelCase for Prisma
+            imageUrl: formData.image_url,
             thumbnail: formData.image_url,
             category: formData.category,
             tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
@@ -193,18 +212,78 @@ export default function NewPhotoPage() {
       const result = await response.json()
       
       if (response.ok) {
-        alert('Photo added successfully!')
-        // Redirect to photos list page
-        window.location.href = '/admin/photos'
+        alert('Photo updated successfully!')
+        router.push('/admin/photos')
       } else {
-        alert('Error: ' + (result.error || 'Failed to add photo'))
+        alert('Error: ' + (result.error || 'Failed to update photo'))
       }
     } catch (error) {
-      alert('Error adding photo: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      alert('Error updating photo: ' + (error instanceof Error ? error.message : 'Unknown error'))
       console.error(error)
     }
     
-    setIsLoading(false)
+    setIsSaving(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this photo? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      let response = await fetch(`/api/photos-supabase/${photoId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        response = await fetch(`/api/photos/${photoId}`, {
+          method: 'DELETE'
+        })
+      }
+
+      if (response.ok) {
+        alert('Photo deleted successfully!')
+        router.push('/admin/photos')
+      } else {
+        alert('Failed to delete photo')
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      alert('Error deleting photo')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading photo...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!photo) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Photo Not Found</h1>
+            <Button asChild>
+              <Link href="/admin/photos">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Photos
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -215,38 +294,55 @@ export default function NewPhotoPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin">
+                <Link href="/admin/photos">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Admin
+                  Back to Photos
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-bold">Add New Photo</h1>
+                <h1 className="text-xl font-bold">Edit Photo</h1>
                 <p className="text-sm text-muted-foreground">
-                  Upload a photo to your gallery
+                  Update your photo details
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={handleSave}
-              disabled={isLoading || !formData.title || !formData.image_url}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? 'Saving...' : 'Save Photo'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isSaving}
+              >
+                Delete
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={isSaving || !formData.title || !formData.image_url}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Image Upload */}
+          {/* Image Preview */}
           <Card>
             <CardHeader>
-              <CardTitle>Photo Upload</CardTitle>
+              <CardTitle>Photo Preview</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Image Preview */}
               {formData.image_url && (
                 <div className="relative">
                   <img
@@ -255,92 +351,50 @@ export default function NewPhotoPage() {
                     className="w-full h-64 object-cover rounded-lg"
                   />
                   <Button
-                    variant="destructive"
+                    variant="secondary"
                     size="sm"
                     className="absolute top-2 right-2"
-                    onClick={() => handleInputChange('image_url', '')}
+                    onClick={() => window.open(formData.image_url, '_blank')}
                   >
-                    Remove
+                    <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
               )}
 
-              {/* Upload Options */}
-              <div className="space-y-3">
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                  <Camera className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <div className="space-y-2">
-                    <Label htmlFor="file-upload" className="cursor-pointer">
-                      <Button variant="outline" asChild>
-                        <span>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Photo
-                        </span>
-                      </Button>
-                    </Label>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Drag & drop or click to upload
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG, WEBP up to 10MB
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-center text-sm text-muted-foreground">or use external URL</div>
-
-                <div className="space-y-2">
-                  <Label>Image URL from Pexels/Unsplash *</Label>
-                  <Input
-                    value={formData.image_url}
-                    onChange={(e) => handleUrlChange(e.target.value)}
-                    placeholder="https://images.unsplash.com/photo-... or https://images.pexels.com/photos/..."
-                    className={urlError ? 'border-red-500' : ''}
-                  />
-                  {urlError && (
-                    <p className="text-xs text-red-500">{urlError}</p>
-                  )}
-                  {isValidatingUrl && (
-                    <p className="text-xs text-blue-500">Validating image URL...</p>
-                  )}
-                  
-                  <div className="flex gap-2 mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('https://unsplash.com', '_blank')}
-                      type="button"
-                    >
-                      <ExternalLink className="mr-2 h-3 w-3" />
-                      Browse Unsplash
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('https://pexels.com', '_blank')}
-                      type="button"
-                    >
-                      <ExternalLink className="mr-2 h-3 w-3" />
-                      Browse Pexels
-                    </Button>
-                  </div>
-                  
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      <strong>How to get image URLs:</strong><br/>
-                      1. Go to Unsplash or Pexels<br/>
-                      2. Find your desired image<br/>
-                      3. Right-click → "Copy image address"<br/>
-                      4. Paste the URL here
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                <Label>Image URL *</Label>
+                <Input
+                  value={formData.image_url}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className={urlError ? 'border-red-500' : ''}
+                />
+                {urlError && (
+                  <p className="text-xs text-red-500">{urlError}</p>
+                )}
+                {isValidatingUrl && (
+                  <p className="text-xs text-blue-500">Validating image URL...</p>
+                )}
+                
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open('https://unsplash.com', '_blank')}
+                    type="button"
+                  >
+                    <ExternalLink className="mr-2 h-3 w-3" />
+                    Browse Unsplash
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open('https://pexels.com', '_blank')}
+                    type="button"
+                  >
+                    <ExternalLink className="mr-2 h-3 w-3" />
+                    Browse Pexels
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -444,23 +498,34 @@ export default function NewPhotoPage() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Action Buttons */}
         <Card className="mt-6">
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
-                Ready to add this photo to your gallery?
+                Photo ID: {photoId}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => window.history.back()}>
-                  Cancel
+                <Button variant="outline" asChild>
+                  <Link href="/admin/photos">
+                    Cancel
+                  </Link>
                 </Button>
                 <Button 
                   onClick={handleSave}
-                  disabled={isLoading || !formData.title || !formData.image_url}
+                  disabled={isSaving || !formData.title || !formData.image_url}
                 >
-                  <Image className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Adding Photo...' : 'Add Photo'}
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

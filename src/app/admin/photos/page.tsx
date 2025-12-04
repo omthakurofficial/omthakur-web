@@ -82,15 +82,26 @@ export default function AdminPhotosPage() {
   const fetchPhotos = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/photos')
+      let response = await fetch('/api/photos')
+      
+      // If Prisma fails, try Supabase API
+      if (!response.ok) {
+        console.log('Prisma API failed, trying Supabase API...')
+        response = await fetch('/api/photos-supabase')
+      }
+      
       if (response.ok) {
         const data = await response.json()
-        setPhotos(data.photos || [])
+        const photosData = data.photos || []
+        setPhotos(photosData)
+        console.log(`Loaded ${photosData.length} photos`)
       } else {
         console.error('Failed to fetch photos')
+        setPhotos([])
       }
     } catch (error) {
       console.error('Error fetching photos:', error)
+      setPhotos([])
     } finally {
       setIsLoading(false)
     }
@@ -102,9 +113,17 @@ export default function AdminPhotosPage() {
     }
 
     try {
-      const response = await fetch(`/api/photos/${photoId}`, {
+      // Try Supabase API first
+      let response = await fetch(`/api/photos-supabase/${photoId}`, {
         method: 'DELETE'
       })
+      
+      // If Supabase fails, try Prisma API
+      if (!response.ok) {
+        response = await fetch(`/api/photos/${photoId}`, {
+          method: 'DELETE'
+        })
+      }
 
       if (response.ok) {
         setPhotos(prev => prev.filter(p => p.id !== photoId))

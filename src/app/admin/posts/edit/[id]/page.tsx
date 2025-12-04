@@ -54,6 +54,12 @@ interface Post {
   created_at: string
   updated_at: string
 }
+
+const mockPost = {
+  id: "1",
+  title: "Building Modern Web Applications with Next.js 15",
+  slug: "building-modern-web-applications-nextjs-15",
+  excerpt: "Discover the latest features and capabilities of Next.js 15",
   content: `# Building Modern Web Applications with Next.js 15
 
 Next.js 15 introduces several groundbreaking features that make building modern web applications easier and more efficient than ever before.
@@ -123,16 +129,11 @@ export default function RootLayout({
 ## Conclusion
 
 Next.js 15 represents a significant step forward in web development, making it easier to build fast, scalable applications with modern features.`,
-  status: "published",
-  category: "tech",
-  tags: ["nextjs", "react", "typescript", "web development"],
+  is_published: true,
   featured: true,
-  coverImage: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
-  author: "Om Thakur",
-  publishedAt: "2024-11-20T10:00:00Z",
-  createdAt: "2024-11-20T08:00:00Z",
-  metaDescription: "Learn how to build modern web applications with Next.js 15, including new features like App Router, Server Components, and Turbopack.",
-  metaKeywords: "Next.js, React, TypeScript, Web Development, App Router"
+  image_url: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
+  created_at: "2024-11-20T08:00:00Z",
+  updated_at: "2024-11-20T10:00:00Z"
 }
 
 const categories = [

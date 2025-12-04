@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { 
   Upload, 
@@ -13,7 +15,9 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Star
+  Star,
+  Loader2,
+  AlertCircle
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -39,36 +43,88 @@ const videoCategories = [
   { name: "Personal", value: "PERSONAL" }
 ]
 
-const videoTypes = [
-  { name: "YouTube", value: "youtube" },
-  { name: "Vimeo", value: "vimeo" },
-  { name: "Direct URL", value: "direct" }
-]
+interface Video {
+  id: string
+  title: string
+  description?: string
+  youtube_url?: string
+  youtubeId: string
+  thumbnail: string
+  category: string
+  tags: string[]
+  featured: boolean
+  visible: boolean
+  createdAt: string
+}
 
-export default function NewVideoPage() {
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [formData, setFormData] = React.useState({
+export default function EditVideoPage() {
+  const params = useParams()
+  const videoId = params.id as string
+  
+  const [isLoading, setIsLoading] = useState(false)
+  const [videoLoading, setVideoLoading] = useState(true)
+  const [video, setVideo] = useState<Video | null>(null)
+  const [formData, setFormData] = useState({
     title: "",
     description: "",
     youtube_url: "",
     youtubeId: "",
     thumbnail_url: "",
-    video_type: "youtube",
-    platform: "YouTube",
     category: "TECH",
     tags: "",
     featured: false,
     visible: true
   })
   
-  const [urlError, setUrlError] = React.useState("")
-  const [isValidatingUrl, setIsValidatingUrl] = React.useState(false)
-  const [previewData, setPreviewData] = React.useState(null)
+  const [urlError, setUrlError] = useState("")
+  const [isValidatingUrl, setIsValidatingUrl] = useState(false)
+
+  // Fetch video data
+  useEffect(() => {
+    const fetchVideo = async () => {
+      try {
+        let response = await fetch(`/api/videos/${videoId}`)
+        
+        // If Prisma fails, try Supabase API
+        if (!response.ok) {
+          response = await fetch(`/api/videos-supabase/${videoId}`)
+        }
+        
+        if (response.ok) {
+          const videoData = await response.json()
+          setVideo(videoData)
+          setFormData({
+            title: videoData.title || "",
+            description: videoData.description || "",
+            youtube_url: videoData.youtube_url || `https://youtube.com/watch?v=${videoData.youtubeId}`,
+            youtubeId: videoData.youtubeId || "",
+            thumbnail_url: videoData.thumbnail || "",
+            category: videoData.category?.toUpperCase() || "TECH",
+            tags: Array.isArray(videoData.tags) ? videoData.tags.join(", ") : "",
+            featured: videoData.featured || false,
+            visible: videoData.visible !== false
+          })
+        } else {
+          alert('Video not found')
+          window.location.href = '/admin/videos'
+        }
+      } catch (error) {
+        console.error('Error fetching video:', error)
+        alert('Error loading video')
+        window.location.href = '/admin/videos'
+      } finally {
+        setVideoLoading(false)
+      }
+    }
+
+    if (videoId) {
+      fetchVideo()
+    }
+  }, [videoId])
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     
-    // Clear URL error when user types
     if (field === 'youtube_url' && urlError) {
       setUrlError("")
     }
@@ -92,7 +148,6 @@ export default function NewVideoPage() {
     return null
   }
 
-  // Validate YouTube URL
   const validateYouTubeUrl = async (url: string) => {
     if (!url) return false
     
@@ -111,8 +166,7 @@ export default function NewVideoPage() {
       setFormData(prev => ({ 
         ...prev, 
         youtubeId: id,
-        thumbnail_url: thumbnailUrl,
-        platform: "YouTube"
+        thumbnail_url: thumbnailUrl
       }))
       
       return true
@@ -126,15 +180,8 @@ export default function NewVideoPage() {
 
   const handleUrlChange = async (url: string) => {
     handleInputChange('youtube_url', url)
-    if (url) {
+    if (url && url !== video?.youtube_url) {
       await validateYouTubeUrl(url)
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        youtubeId: "",
-        thumbnail_url: "",
-        platform: "YouTube"
-      }))
     }
   }
 
@@ -154,7 +201,6 @@ export default function NewVideoPage() {
     }
 
     if (!formData.youtubeId) {
-      // Try to extract ID one more time
       const id = extractYouTubeId(formData.youtube_url)
       if (!id) {
         alert('Please enter a valid YouTube URL')
@@ -166,14 +212,15 @@ export default function NewVideoPage() {
 
     try {
       // Try Supabase API first
-      let response = await fetch('/api/videos-supabase', {
-        method: 'POST',
+      let response = await fetch(`/api/videos-supabase/${videoId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
           youtube_url: formData.youtube_url,
           youtubeId: formData.youtubeId,
+          thumbnail: formData.thumbnail_url,
           category: formData.category,
           tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
           featured: formData.featured,
@@ -183,13 +230,14 @@ export default function NewVideoPage() {
       
       // If Supabase fails, try Prisma API
       if (!response.ok) {
-        response = await fetch('/api/videos', {
-          method: 'POST',
+        response = await fetch(`/api/videos/${videoId}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: formData.title,
             description: formData.description,
             youtubeId: formData.youtubeId,
+            thumbnail: formData.thumbnail_url,
             category: formData.category,
             tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
             featured: formData.featured,
@@ -201,17 +249,74 @@ export default function NewVideoPage() {
       const result = await response.json()
       
       if (response.ok) {
-        alert('Video added successfully!')
+        alert('Video updated successfully!')
         window.location.href = '/admin/videos'
       } else {
-        alert('Error: ' + (result.error || 'Failed to add video'))
+        alert('Error: ' + (result.error || 'Failed to update video'))
       }
     } catch (error) {
-      alert('Error adding video')
+      alert('Error updating video: ' + (error instanceof Error ? error.message : 'Unknown error'))
       console.error(error)
+    } finally {
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      let response = await fetch(`/api/videos-supabase/${videoId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        response = await fetch(`/api/videos/${videoId}`, {
+          method: 'DELETE'
+        })
+      }
+
+      if (response.ok) {
+        alert('Video deleted successfully!')
+        window.location.href = '/admin/videos'
+      } else {
+        alert('Failed to delete video')
+      }
+    } catch (error) {
+      console.error('Error deleting video:', error)
+      alert('Error deleting video')
+    }
+  }
+
+  if (videoLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading video...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!video) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Video Not Found</h1>
+            <Button asChild>
+              <Link href="/admin/videos">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Videos
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -222,25 +327,43 @@ export default function NewVideoPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin">
+                <Link href="/admin/videos">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Admin
+                  Back to Videos
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-bold">Add New Video</h1>
+                <h1 className="text-xl font-bold">Edit Video</h1>
                 <p className="text-sm text-muted-foreground">
-                  Add a video to your portfolio
+                  Update video details
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={handleSave}
-              disabled={isLoading || !formData.title || !formData.youtube_url}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading ? 'Saving...' : 'Save Video'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isLoading}
+              >
+                Delete
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={isLoading || !formData.title || !formData.youtube_url}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -253,7 +376,6 @@ export default function NewVideoPage() {
               <CardTitle>Video Preview</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Video Embed or Thumbnail */}
               {formData.youtube_url ? (
                 <div className="relative">
                   {formData.thumbnail_url ? (
@@ -267,7 +389,7 @@ export default function NewVideoPage() {
                         <PlayCircle className="h-16 w-16 text-white" />
                       </div>
                       <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 px-2 py-1 rounded text-white text-sm">
-                        {formData.platform}
+                        YouTube
                       </div>
                     </div>
                   ) : (
@@ -295,39 +417,27 @@ export default function NewVideoPage() {
                 </div>
               )}
 
-              {/* Video Type Selector */}
-              <div>
-                <Label>Video Platform</Label>
-                <Select value={formData.video_type} onValueChange={(value) => handleInputChange('video_type', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {videoTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                          {type.value === 'youtube' && <Youtube className="h-4 w-4" />}
-                          {type.value === 'vimeo' && <Video className="h-4 w-4" />}
-                          {type.value === 'direct' && <ExternalLink className="h-4 w-4" />}
-                          {type.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Video URL */}
               <div>
-                <Label htmlFor="youtube_url">Video URL *</Label>
+                <Label htmlFor="youtube_url">YouTube URL *</Label>
                 <Input
                   id="youtube_url"
                   value={formData.youtube_url}
                   onChange={(e) => handleUrlChange(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
+                  className={urlError ? 'border-red-500' : ''}
                 />
+                {urlError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {urlError}
+                  </p>
+                )}
+                {isValidatingUrl && (
+                  <p className="text-xs text-blue-500 mt-1">Validating YouTube URL...</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Supports YouTube, Vimeo, and direct video URLs
+                  Supports various YouTube URL formats
                 </p>
               </div>
             </CardContent>
@@ -445,23 +555,34 @@ export default function NewVideoPage() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Action Buttons */}
         <Card className="mt-6">
           <CardContent className="p-4">
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
-                Ready to add this video to your portfolio?
+                Video ID: {videoId}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => window.history.back()}>
-                  Cancel
+                <Button variant="outline" asChild>
+                  <Link href="/admin/videos">
+                    Cancel
+                  </Link>
                 </Button>
                 <Button 
                   onClick={handleSave}
                   disabled={isLoading || !formData.title || !formData.youtube_url}
                 >
-                  <Video className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Adding Video...' : 'Add Video'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

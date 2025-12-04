@@ -276,20 +276,35 @@ export default function VideosPage() {
 
                     {/* Play Overlay */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <Button
-                        size="lg"
-                        className="rounded-full bg-red-600 hover:bg-red-700 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (video.youtubeId) {
-                            window.open(`https://www.youtube.com/watch?v=${video.youtubeId}`, '_blank')
-                          } else {
-                            toggleVideo(video.id)
-                          }
-                        }}
-                      >
-                        <Play className="h-6 w-6 ml-1" fill="currentColor" />
-                      </Button>
+                      <div className="flex gap-2">
+                        {/* Play in embedded player */}
+                        <Button
+                          size="lg"
+                          className="rounded-full bg-red-600 hover:bg-red-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleVideoClick(video)
+                          }}
+                        >
+                          <Play className="h-6 w-6 ml-1" fill="currentColor" />
+                        </Button>
+                        
+                        {/* Open in YouTube */}
+                        {video.youtubeId && (
+                          <Button
+                            size="lg"
+                            variant="secondary"
+                            className="rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(`https://www.youtube.com/watch?v=${video.youtubeId}`, '_blank')
+                            }}
+                            title="Watch on YouTube"
+                          >
+                            <Youtube className="h-6 w-6 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* YouTube Icon */}

@@ -59,7 +59,7 @@ export default function PhotosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
-  const [viewMode, setViewMode] = useState<"grid" | "masonry">("masonry")
+  const [viewMode, setViewMode] = useState<"grid" | "masonry">("grid")
 
   // Fetch real photos data
   useEffect(() => {
