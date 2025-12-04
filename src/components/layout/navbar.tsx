@@ -134,7 +134,7 @@ export function Navbar() {
             </Button>
 
             {/* Admin Login */}
-            <Link href="/admin">
+            <Link href="/#admin/login">
               <Button variant="ghost" size="icon">
                 <User className="h-4 w-4" />
               </Button>
