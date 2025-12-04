@@ -166,7 +166,7 @@ export default function HomePage() {
             >
               <div className="relative z-10">
                 <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face"
+                  src="https://images.pexels.com/photos/33059766/pexels-photo-33059766.png"
                   alt="Om Thakur"
                   className="w-80 h-80 rounded-full mx-auto object-cover border-4 border-white shadow-2xl"
                 />

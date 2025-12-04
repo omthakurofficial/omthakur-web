@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     type: 'profile',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&crop=face',
+        url: 'https://images.pexels.com/photos/33059766/pexels-photo-33059766.png',
         width: 800,
         height: 600,
         alt: 'Om Thakur - Cloud & DevOps Engineer'
@@ -146,11 +146,11 @@ export default function AboutPage() {
               <div className="relative w-full max-w-md mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur-2xl opacity-20"></div>
                 <Image
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face"
+                  src="https://images.pexels.com/photos/33059766/pexels-photo-33059766.png"
                   alt="Om Thakur"
                   width={400}
                   height={400}
-                  className="relative rounded-2xl shadow-2xl"
+                  className="relative rounded-full shadow-2xl object-cover"
                 />
               </div>
             </div>
