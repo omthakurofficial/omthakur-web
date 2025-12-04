@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { 
   Save,
@@ -142,25 +143,58 @@ const statuses = [
 ]
 
 export default function PostEditorPage() {
+  const params = useParams()
   const router = useRouter()
-  const [activeTab, setActiveTab] = React.useState("content")
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [activeTab, setActiveTab] = useState("content")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
+  const [post, setPost] = useState<any>(null)
   
   // Form state
-  const [formData, setFormData] = React.useState({
-    title: mockPost.title,
-    slug: mockPost.slug,
-    excerpt: mockPost.excerpt,
-    content: mockPost.content,
-    status: mockPost.status,
-    category: mockPost.category,
-    tags: mockPost.tags.join(", "),
-    featured: mockPost.featured,
-    coverImage: mockPost.coverImage,
-    metaDescription: mockPost.metaDescription,
-    metaKeywords: mockPost.metaKeywords,
-    publishedAt: mockPost.publishedAt?.split('T')[0] || ""
+  const [formData, setFormData] = useState({
+    title: "",
+    slug: "",
+    excerpt: "",
+    content: "",
+    published: false,
+    featured: false
   })
+
+  useEffect(() => {
+    fetchPost()
+  }, [params.id])
+
+  const fetchPost = async () => {
+    setIsFetching(true)
+    try {
+      // Since we don't have individual post API endpoint, we'll fetch all and find the one
+      const response = await fetch('/api/posts-crud?all=true')
+      if (response.ok) {
+        const data = await response.json()
+        const foundPost = data.posts?.find((p: any) => p.id === params.id)
+        
+        if (foundPost) {
+          setPost(foundPost)
+          setFormData({
+            title: foundPost.title || "",
+            slug: foundPost.slug || "",
+            excerpt: foundPost.excerpt || "",
+            content: foundPost.content || "",
+            published: foundPost.published || false,
+            featured: foundPost.featured || false
+          })
+        } else {
+          alert('Post not found')
+          router.push('/admin/posts')
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching post:', error)
+      alert('Error loading post')
+    } finally {
+      setIsFetching(false)
+    }
+  }
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -183,17 +217,95 @@ export default function PostEditorPage() {
     }
   }
 
-  const handleSave = async (saveType: 'draft' | 'publish' | 'schedule') => {
+  const handleSave = async () => {
     setIsLoading(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!formData.title.trim()) {
+      alert('Please enter a title')
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.content.trim()) {
+      alert('Please enter some content')
+      setIsLoading(false)
+      return
+    }
     
-    console.log('Saving post:', { ...formData, saveType })
-    setIsLoading(false)
-    
-    // Show success message and potentially redirect
-    alert(`Post ${saveType === 'draft' ? 'saved as draft' : saveType === 'publish' ? 'published' : 'scheduled'} successfully!`)
+    try {
+      const response = await fetch('/api/posts-crud', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: params.id,
+          title: formData.title,
+          content: formData.content,
+          excerpt: formData.excerpt || formData.content.slice(0, 200) + '...',
+          published: formData.published,
+          featured: formData.featured
+        })
+      })
+
+      if (response.ok) {
+        alert('Post updated successfully!')
+        router.push('/admin/posts')
+      } else {
+        throw new Error('Failed to update post')
+      }
+    } catch (error) {
+      console.error('Error updating post:', error)
+      alert('Failed to update post. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/posts-crud?id=${params.id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        alert('Post deleted successfully!')
+        router.push('/admin/posts')
+      } else {
+        alert('Failed to delete post')
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete post')
+    }
+  }
+
+  if (isFetching) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading post...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Post Not Found</h1>
+          <Button asChild>
+            <Link href="/admin/posts">Back to Posts</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const formatDate = (dateStr: string) => {

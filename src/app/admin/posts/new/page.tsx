@@ -201,15 +201,41 @@ export default function NewPostPage() {
       return
     }
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    console.log('Creating post:', { ...formData, saveType })
-    setIsLoading(false)
-    
-    // Show success message and redirect
-    alert(`Post ${saveType === 'draft' ? 'saved as draft' : saveType === 'publish' ? 'published' : 'scheduled'} successfully!`)
-    router.push('/admin/posts')
+    try {
+      // Create the post data - only include fields that exist in database
+      const postData = {
+        title: formData.title,
+        content: formData.content,
+        excerpt: formData.excerpt || formData.content.slice(0, 200) + '...',
+        published: saveType === 'publish',
+        featured: formData.featured || false
+      }
+
+      // Call your working API
+      const response = await fetch('/api/posts-crud', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create post')
+      }
+
+      const result = await response.json()
+      console.log('Post created successfully:', result)
+      
+      // Show success message and redirect
+      alert(`Post ${saveType === 'draft' ? 'saved as draft' : saveType === 'publish' ? 'published' : 'scheduled'} successfully!`)
+      router.push('/admin/posts')
+    } catch (error) {
+      console.error('Error creating post:', error)
+      alert('Failed to create post. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const wordCount = formData.content.split(/\s+/).filter(word => word.length > 0).length

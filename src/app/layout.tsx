@@ -8,6 +8,7 @@ import { Footer } from "@/components/layout/footer";
 import { StructuredData } from "@/components/seo/StructuredData";
 import { ResourcePreloader, PerformanceMonitor } from "@/components/seo/Performance";
 import { Analytics } from "@/components/analytics/Analytics";
+import { FontLoader } from "@/components/FontLoader";
 import { generateSEOMetadata, personStructuredData, websiteStructuredData } from "@/lib/seo";
 
 const inter = Inter({ 
@@ -15,6 +16,21 @@ const inter = Inter({
   display: "swap",
   variable: "--font-inter",
   preload: true,
+  fallback: [
+    'system-ui',
+    '-apple-system',
+    'BlinkMacSystemFont',
+    'Segoe UI',
+    'Roboto',
+    'Helvetica Neue',
+    'Arial',
+    'Noto Sans',
+    'sans-serif',
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    'Segoe UI Symbol',
+    'Noto Color Emoji'
+  ],
 });
 
 export const metadata: Metadata = generateSEOMetadata({
@@ -45,6 +61,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <StructuredData data={personStructuredData} />
         <StructuredData data={websiteStructuredData} />
         <link rel="canonical" href="https://omthakur.tech" />
@@ -55,6 +73,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
       </head>
       <body className={`${inter.className} ${inter.variable}`}>
+        <FontLoader />
         <ResourcePreloader />
         <PerformanceMonitor />
         <Analytics />

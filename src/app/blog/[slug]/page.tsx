@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
@@ -31,117 +32,16 @@ interface Props {
   }
 }
 
-// Mock data - replace with actual API call
-const blogPost = {
-  id: "1",
-  title: "Complete Guide to AWS EKS: From Setup to Production",
-  slug: "complete-guide-aws-eks",
-  content: `# Complete Guide to AWS EKS
-
-Amazon Elastic Kubernetes Service (EKS) is a managed Kubernetes service that makes it easy to run Kubernetes on AWS without needing to install and operate your own Kubernetes control plane.
-
-## What is AWS EKS?
-
-AWS EKS is a managed service that eliminates the need to install, operate, and maintain your own Kubernetes control plane on AWS. It provides:
-
-- **Managed Control Plane**: AWS manages the Kubernetes control plane across multiple AZs
-- **High Availability**: Built-in redundancy and automatic failover
-- **Security**: Integration with AWS IAM, VPC, and other security services
-- **Scalability**: Auto-scaling capabilities for both nodes and pods
-
-## Setting Up Your First EKS Cluster
-
-### Prerequisites
-
-Before you begin, make sure you have:
-
-1. AWS CLI configured
-2. kubectl installed
-3. eksctl CLI tool
-4. Proper IAM permissions
-
-### Step 1: Create the Cluster
-
-\`\`\`bash
-eksctl create cluster \\
-  --name my-cluster \\
-  --version 1.24 \\
-  --region us-west-2 \\
-  --nodegroup-name standard-workers \\
-  --node-type t3.medium \\
-  --nodes 3 \\
-  --nodes-min 1 \\
-  --nodes-max 4 \\
-  --managed
-\`\`\`
-
-This command creates a new EKS cluster with managed node groups.
-
-### Step 2: Configure kubectl
-
-\`\`\`bash
-aws eks update-kubeconfig --region us-west-2 --name my-cluster
-\`\`\`
-
-### Step 3: Verify the Installation
-
-\`\`\`bash
-kubectl get nodes
-kubectl get pods --all-namespaces
-\`\`\`
-
-## Best Practices for Production
-
-### 1. Security Considerations
-
-- Use IAM roles for service accounts (IRSA)
-- Enable cluster logging
-- Use private endpoints when possible
-- Implement pod security policies
-
-### 2. Networking
-
-- Use VPC CNI for optimal performance
-- Configure proper security groups
-- Use Application Load Balancer Controller
-
-### 3. Monitoring and Observability
-
-- Deploy CloudWatch Container Insights
-- Use AWS X-Ray for distributed tracing
-- Implement Prometheus and Grafana
-
-## Conclusion
-
-AWS EKS provides a robust platform for running containerized applications at scale. By following these best practices, you can ensure your EKS cluster is secure, scalable, and production-ready.`,
-  excerpt: "Learn how to set up and manage a production-ready Kubernetes cluster on AWS EKS with best practices and security considerations.",
-  coverImage: "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1200",
-  author: {
-    id: "1",
-    name: "Om Thakur",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    username: "omthakur",
-    bio: "Cloud & DevOps Engineer passionate about AWS, Kubernetes, and automation"
-  },
-  category: {
-    name: "DevOps",
-    slug: "devops",
-    color: "#10B981"
-  },
-  tags: [
-    { name: "AWS", slug: "aws", color: "#FF9900" },
-    { name: "Kubernetes", slug: "kubernetes", color: "#326CE5" },
-    { name: "EKS", slug: "eks", color: "#FF6B35" }
-  ],
-  publishedAt: "2024-11-20T10:00:00Z",
-  updatedAt: "2024-11-20T10:00:00Z",
-  readingTime: 8,
-  views: 1250,
-  likes: 89,
-  comments: 12,
-  featured: true,
-  metaTitle: "Complete AWS EKS Guide - Setup to Production | Om Thakur",
-  metaDescription: "Learn how to set up and manage a production-ready Kubernetes cluster on AWS EKS with best practices, security considerations, and step-by-step instructions."
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string;
+  published: boolean;
+  featured: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const relatedPosts = [
@@ -166,8 +66,31 @@ const relatedPosts = [
 export default function BlogPostPage({ params }: Props) {
   const [showScrollToTop, setShowScrollToTop] = React.useState(false)
   const [liked, setLiked] = React.useState(false)
+  const [blogPost, setBlogPost] = useState<BlogPost | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const response = await fetch(`/api/blog/${params.slug}`)
+        if (!response.ok) {
+          throw new Error('Post not found')
+        }
+        const data = await response.json()
+        setBlogPost(data)
+      } catch (err) {
+        setError('Failed to load blog post')
+        console.error('Error fetching blog post:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPost()
+  }, [params.slug])
+
+  useEffect(() => {
     const handleScroll = () => {
       setShowScrollToTop(window.scrollY > 400)
     }
@@ -175,6 +98,34 @@ export default function BlogPostPage({ params }: Props) {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading blog post...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !blogPost) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-red-600 mb-4">404</h1>
+          <p className="text-xl text-muted-foreground mb-4">{error || 'Blog post not found'}</p>
+          <Link href="/blog">
+            <Button>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Blog
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -205,17 +156,15 @@ export default function BlogPostPage({ params }: Props) {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative">
-        {/* Cover Image */}
-        <div className="aspect-[21/9] relative overflow-hidden">
-          <img
-            src={blogPost.coverImage}
-            alt={blogPost.title}
-            className="object-cover w-full h-full"
-          />
-          <div className="absolute inset-0 bg-black/20" />
-        </div>
-
-        {/* Content Overlay */}
+          {/* Cover Image */}
+          <div className="aspect-[21/9] relative overflow-hidden">
+            <img
+              src="https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=1200"
+              alt={blogPost.title}
+              className="object-cover w-full h-full"
+            />
+            <div className="absolute inset-0 bg-black/20" />
+          </div>        {/* Content Overlay */}
         <div className="absolute inset-0 flex items-end">
           <div className="container mx-auto px-4 pb-12">
             <div className="max-w-4xl">
@@ -232,10 +181,9 @@ export default function BlogPostPage({ params }: Props) {
                     </Button>
                   </Link>
                   <Badge 
-                    className="text-white"
-                    style={{ backgroundColor: blogPost.category.color }}
+                    className="text-white bg-blue-600"
                   >
-                    {blogPost.category.name}
+                    Blog
                   </Badge>
                   {blogPost.featured && (
                     <Badge variant="destructive" className="text-white">
@@ -249,48 +197,40 @@ export default function BlogPostPage({ params }: Props) {
                 </h1>
 
                 <p className="text-xl text-white/90 max-w-3xl">
-                  {blogPost.excerpt}
+                  {blogPost.excerpt || "Read this amazing blog post..."}
                 </p>
 
                 {/* Meta Info */}
                 <div className="flex flex-wrap items-center gap-4 text-white/80">
                   <div className="flex items-center gap-2">
                     <img
-                      src={blogPost.author.avatar}
-                      alt={blogPost.author.name}
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
+                      alt="Om Thakur"
                       className="w-8 h-8 rounded-full border-2 border-white/50"
                     />
-                    <span className="font-medium">{blogPost.author.name}</span>
+                    <span className="font-medium">Om Thakur</span>
                   </div>
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    {new Date(blogPost.publishedAt).toLocaleDateString()}
+                    {new Date(blogPost.created_at).toLocaleDateString()}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {blogPost.readingTime} min read
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    {blogPost.views} views
+                    5 min read
                   </span>
                 </div>
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2">
-                  {blogPost.tags.map((tag) => (
-                    <Badge 
-                      key={tag.slug}
-                      variant="outline"
-                      className="text-white border-white/50 hover:bg-white/20"
-                    >
-                      <Tag className="mr-1 h-3 w-3" />
-                      {tag.name}
-                    </Badge>
-                  ))}
+                  <Badge 
+                    variant="outline"
+                    className="text-white border-white/50 hover:bg-white/20"
+                  >
+                    <Tag className="mr-1 h-3 w-3" />
+                    Technology
+                  </Badge>
                 </div>
               </motion.div>
             </div>
@@ -343,11 +283,9 @@ export default function BlogPostPage({ params }: Props) {
                 transition={{ delay: 0.2 }}
                 className="prose prose-lg max-w-none dark:prose-invert"
               >
-                <div 
-                  dangerouslySetInnerHTML={{ 
-                    __html: blogPost.content.replace(/\n/g, '<br/>') 
-                  }} 
-                />
+                <div className="whitespace-pre-wrap">
+                  {blogPost.content}
+                </div>
               </motion.div>
 
               {/* Mobile Social Share */}
@@ -374,20 +312,20 @@ export default function BlogPostPage({ params }: Props) {
                 <CardHeader>
                   <div className="flex items-start gap-4">
                     <img
-                      src={blogPost.author.avatar}
-                      alt={blogPost.author.name}
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
+                      alt="Om Thakur"
                       className="w-16 h-16 rounded-full"
                     />
                     <div className="flex-1">
                       <CardTitle className="flex items-center gap-2">
-                        {blogPost.author.name}
+                        Om Thakur
                         <Badge variant="secondary">Author</Badge>
                       </CardTitle>
                       <CardDescription className="mt-2">
-                        {blogPost.author.bio}
+                        Cloud & DevOps Engineer passionate about technology and sharing knowledge.
                       </CardDescription>
                       <div className="flex items-center gap-4 mt-3">
-                        <Link href={`/author/${blogPost.author.username}`}>
+                        <Link href="/about">
                           <Button variant="outline" size="sm">
                             <User className="mr-2 h-4 w-4" />
                             View Profile

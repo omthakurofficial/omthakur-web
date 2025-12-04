@@ -27,25 +27,25 @@
   }
 
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 216 12.2% 83.9%;
+    --background: 215 25% 12%;
+    --foreground: 210 20% 95%;
+    --card: 215 25% 15%;
+    --card-foreground: 210 20% 95%;
+    --popover: 215 25% 15%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 215 25% 12%;
+    --secondary: 215 25% 18%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 215 25% 18%;
+    --muted-foreground: 217.9 10.6% 70%;
+    --accent: 215 25% 18%;
+    --accent-foreground: 210 20% 95%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 210 20% 95%;
+    --border: 215 25% 22%;
+    --input: 215 25% 18%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -55,29 +55,61 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+    font-display: swap;
+  }
+  
+  /* Improved readability styles */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+    line-height: 1.4;
+  }
+  
+  p {
+    @apply leading-relaxed;
+  }
+  
+  /* Better dark mode readability */
+  .dark {
+    background: linear-gradient(135deg, hsl(215, 25%, 12%) 0%, hsl(215, 25%, 14%) 100%);
+  }
+  
+  /* Card improvements for dark mode */
+  .dark .card {
+    background: hsl(215, 25%, 15%);
+    border: 1px solid hsl(215, 25%, 22%);
   }
 }
 
-/* Custom styles for blog content */
+/* Custom styles for blog content and better readability */
 @layer components {
   .prose {
     @apply max-w-none;
+    line-height: 1.7;
   }
   
   .prose h1 {
     @apply text-4xl font-bold mt-8 mb-4 text-foreground;
+    line-height: 1.3;
   }
   
   .prose h2 {
     @apply text-3xl font-semibold mt-6 mb-3 text-foreground;
+    line-height: 1.4;
   }
   
   .prose h3 {
     @apply text-2xl font-semibold mt-5 mb-3 text-foreground;
+    line-height: 1.4;
   }
   
   .prose p {
-    @apply mb-4 leading-7 text-muted-foreground;
+    @apply mb-4 leading-relaxed;
+    color: hsl(var(--foreground) / 0.9);
   }
   
   .prose ul {
@@ -89,26 +121,46 @@
   }
   
   .prose li {
-    @apply mb-1;
+    @apply mb-1 leading-relaxed;
   }
   
   .prose blockquote {
-    @apply border-l-4 border-primary pl-4 italic my-4 text-muted-foreground;
+    @apply border-l-4 border-primary pl-4 italic my-4;
+    color: hsl(var(--foreground) / 0.8);
+    background: hsl(var(--muted) / 0.3);
+    padding: 1rem;
+    border-radius: 0.5rem;
   }
   
   .prose pre {
     @apply bg-muted p-4 rounded-lg overflow-x-auto my-4;
+    background: hsl(var(--muted) / 0.8);
   }
   
   .prose code {
-    @apply bg-muted px-1 py-0.5 rounded text-sm font-mono;
+    @apply px-1 py-0.5 rounded text-sm font-mono;
+    background: hsl(var(--muted) / 0.6);
+    color: hsl(var(--foreground) / 0.9);
   }
   
   .prose a {
     @apply text-primary hover:underline;
+    font-weight: 500;
   }
   
   .prose img {
     @apply rounded-lg my-4;
+  }
+  
+  /* Improved card readability */
+  .card {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+  
+  /* Better text contrast */
+  .text-muted-foreground {
+    color: hsl(var(--muted-foreground) / 0.9);
   }
 }

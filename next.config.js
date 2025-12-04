@@ -4,7 +4,11 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['prisma'],
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizeServerReact: true,
   },
+
+  // Font optimization
+  optimizeFonts: true,
 
   // Image optimization
   images: {
@@ -44,6 +48,11 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // Font preconnect headers for Google Fonts
+          {
+            key: 'Link',
+            value: '<https://fonts.googleapis.com>; rel=preconnect; crossorigin, <https://fonts.gstatic.com>; rel=preconnect; crossorigin'
+          },
           // Security headers
           {
             key: 'X-DNS-Prefetch-Control',

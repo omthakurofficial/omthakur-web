@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -49,104 +50,25 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// Mock data for posts
-const posts = [
-  {
-    id: "1",
-    title: "Building Modern Web Applications with Next.js 15",
-    slug: "building-modern-web-apps-nextjs-15",
-    excerpt: "Learn how to build performant, modern web applications using Next.js 15 with all the latest features.",
-    content: "Full content here...",
-    status: "published",
-    category: "tech",
-    tags: ["nextjs", "react", "typescript", "web development"],
-    featured: true,
-    coverImage: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
-    author: "Om Thakur",
-    views: 2340,
-    likes: 156,
-    comments: 23,
-    createdAt: "2024-11-20T10:00:00Z",
-    updatedAt: "2024-11-20T10:00:00Z",
-    publishedAt: "2024-11-20T10:00:00Z"
-  },
-  {
-    id: "2",
-    title: "Photography Tips for Beginners: Getting Started",
-    slug: "photography-tips-beginners-getting-started",
-    excerpt: "Essential photography tips and techniques for beginners who want to improve their skills.",
-    content: "Draft content...",
-    status: "draft",
-    category: "photography",
-    tags: ["photography", "tips", "beginners", "camera"],
-    featured: false,
-    coverImage: "https://images.unsplash.com/photo-1495121553079-4c61bcce1894?w=800",
-    author: "Om Thakur",
-    views: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2024-11-19T14:30:00Z",
-    updatedAt: "2024-11-19T14:30:00Z",
-    publishedAt: null
-  },
-  {
-    id: "3",
-    title: "My Journey Through Europe: A Photo Story",
-    slug: "journey-through-europe-photo-story",
-    excerpt: "Follow my travels through Europe captured through photography and stories from each destination.",
-    content: "Travel content...",
-    status: "published",
-    category: "travel",
-    tags: ["travel", "europe", "photography", "adventure"],
-    featured: true,
-    coverImage: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800",
-    author: "Om Thakur",
-    views: 1870,
-    likes: 134,
-    comments: 18,
-    createdAt: "2024-11-18T09:15:00Z",
-    updatedAt: "2024-11-18T09:15:00Z",
-    publishedAt: "2024-11-18T09:15:00Z"
-  },
-  {
-    id: "4",
-    title: "Understanding React Hooks: A Complete Guide",
-    slug: "understanding-react-hooks-complete-guide",
-    excerpt: "Deep dive into React Hooks with practical examples and best practices for modern React development.",
-    content: "React content...",
-    status: "published",
-    category: "tech",
-    tags: ["react", "hooks", "javascript", "frontend"],
-    featured: false,
-    coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800",
-    author: "Om Thakur",
-    views: 3240,
-    likes: 287,
-    comments: 45,
-    createdAt: "2024-11-15T16:20:00Z",
-    updatedAt: "2024-11-15T16:20:00Z",
-    publishedAt: "2024-11-15T16:20:00Z"
-  },
-  {
-    id: "5",
-    title: "Design Systems: Building Scalable UI Components",
-    slug: "design-systems-scalable-ui-components",
-    excerpt: "Learn how to create and maintain design systems that scale with your product and team.",
-    content: "Design content...",
-    status: "scheduled",
-    category: "design",
-    tags: ["design", "ui", "components", "system"],
-    featured: false,
-    coverImage: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=800",
-    author: "Om Thakur",
-    views: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2024-11-16T11:30:00Z",
-    updatedAt: "2024-11-16T11:30:00Z",
-    publishedAt: "2024-11-25T10:00:00Z"
-  }
-]
+// Post interface for type safety
+interface Post {
+  id: string
+  title: string
+  slug: string
+  excerpt?: string
+  content: string
+  published: boolean
+  featured?: boolean
+  category?: string
+  tags?: string[]
+  cover_image?: string
+  created_at: string
+  updated_at?: string
+  published_at?: string
+  views?: number
+  likes?: number
+  comments?: number
+}
 
 const categories = [
   { name: "All Categories", value: "all" },
@@ -164,11 +86,35 @@ const statuses = [
 ]
 
 export default function AdminPostsPage() {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedCategory, setSelectedCategory] = React.useState("all")
   const [selectedStatus, setSelectedStatus] = React.useState("all")
-  const [filteredPosts, setFilteredPosts] = React.useState(posts)
+  const [filteredPosts, setFilteredPosts] = React.useState<Post[]>([])
   const [selectedPosts, setSelectedPosts] = React.useState<string[]>([])
+
+  // Fetch posts from API
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch('/api/posts-crud?all=true')
+        if (response.ok) {
+          const data = await response.json()
+          setPosts(data.posts || [])
+        } else {
+          console.error('Failed to fetch posts:', response.statusText)
+        }
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchPosts()
+  }, [])
 
   // Filter posts
   React.useEffect(() => {
@@ -177,8 +123,8 @@ export default function AdminPostsPage() {
     if (searchQuery.trim()) {
       filtered = filtered.filter(post =>
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        (post.excerpt && post.excerpt.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (post.category && post.category.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     }
 
@@ -187,11 +133,15 @@ export default function AdminPostsPage() {
     }
 
     if (selectedStatus !== "all") {
-      filtered = filtered.filter(post => post.status === selectedStatus)
+      if (selectedStatus === "published") {
+        filtered = filtered.filter(post => post.published === true)
+      } else if (selectedStatus === "draft") {
+        filtered = filtered.filter(post => post.published === false)
+      }
     }
 
     setFilteredPosts(filtered)
-  }, [searchQuery, selectedCategory, selectedStatus])
+  }, [searchQuery, selectedCategory, selectedStatus, posts])
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "Not published"
@@ -233,11 +183,67 @@ export default function AdminPostsPage() {
     )
   }
 
+  // Delete single post
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/posts-crud?id=${postId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Remove post from state
+        setPosts(prev => prev.filter(p => p.id !== postId))
+        alert('Post deleted successfully!')
+      } else {
+        const error = await response.json()
+        alert(`Failed to delete post: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete post. Please try again.')
+    }
+  }
+
+  // Delete multiple posts
+  const handleBulkDelete = async () => {
+    if (selectedPosts.length === 0) return
+    
+    if (!confirm(`Are you sure you want to delete ${selectedPosts.length} posts? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const deletePromises = selectedPosts.map(postId => 
+        fetch(`/api/posts-crud?id=${postId}`, { method: 'DELETE' })
+      )
+      
+      const results = await Promise.all(deletePromises)
+      const successCount = results.filter(r => r.ok).length
+      
+      if (successCount === selectedPosts.length) {
+        setPosts(prev => prev.filter(p => !selectedPosts.includes(p.id)))
+        setSelectedPosts([])
+        alert(`${successCount} posts deleted successfully!`)
+      } else {
+        alert(`${successCount} of ${selectedPosts.length} posts deleted. Some deletions failed.`)
+        // Refresh the list
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      alert('Failed to delete posts. Please try again.')
+    }
+  }
+
   const stats = {
     total: posts.length,
-    published: posts.filter(p => p.status === 'published').length,
-    drafts: posts.filter(p => p.status === 'draft').length,
-    scheduled: posts.filter(p => p.status === 'scheduled').length
+    published: posts.filter(p => p.published === true).length,
+    drafts: posts.filter(p => p.published === false).length,
+    scheduled: 0 // Will implement scheduled posts later
   }
 
   return (
@@ -351,7 +357,7 @@ export default function AdminPostsPage() {
                   <Button variant="outline" size="sm">
                     Bulk Edit
                   </Button>
-                  <Button variant="destructive" size="sm">
+                  <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                     Delete ({selectedPosts.length})
                   </Button>
                 </div>
@@ -382,117 +388,141 @@ export default function AdminPostsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPosts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selectedPosts.includes(post.id)}
-                      onChange={() => handleSelectPost(post.id)}
-                      className="rounded"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={post.coverImage}
-                        alt={post.title}
-                        className="w-16 h-12 object-cover rounded"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-sm line-clamp-1">{post.title}</h3>
-                          {post.featured && (
-                            <Bookmark className="h-3 w-3 text-yellow-500" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                          {post.excerpt}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {post.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs h-5">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(post.status)}>
-                      {post.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="capitalize">{post.category}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {formatNumber(post.views)}
-                        </span>
-                        <span>{formatNumber(post.likes)} likes</span>
-                        <span>{formatNumber(post.comments)} comments</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>Created: {formatDate(post.createdAt)}</div>
-                      {post.publishedAt && (
-                        <div className="text-xs text-muted-foreground">
-                          Published: {formatDate(post.publishedAt)}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/posts/edit/${post.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/blog/${post.slug}`} target="_blank">
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Post
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Bookmark className="mr-2 h-4 w-4" />
-                            {post.featured ? 'Remove from Featured' : 'Add to Featured'}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                      <span>Loading posts...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredPosts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedPosts.includes(post.id)}
+                        onChange={() => handleSelectPost(post.id)}
+                        className="rounded"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-3">
+                        {post.cover_image && (
+                          <img
+                            src={post.cover_image}
+                            alt={post.title}
+                            className="w-16 h-12 object-cover rounded"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-sm line-clamp-1">{post.title}</h3>
+                            {post.featured && (
+                              <Bookmark className="h-3 w-3 text-yellow-500" />
+                            )}
+                          </div>
+                          {post.excerpt && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                              {post.excerpt}
+                            </p>
+                          )}
+                          {post.tags && post.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {(Array.isArray(post.tags) ? post.tags : JSON.parse(post.tags || '[]')).slice(0, 3).map((tag: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs h-5">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={post.published ? 'default' : 'secondary'}>
+                        {post.published ? 'published' : 'draft'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize">{post.category || 'Uncategorized'}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {formatNumber(post.views || 0)}
+                          </span>
+                          <span>{formatNumber(post.likes || 0)} likes</span>
+                          <span>{formatNumber(post.comments || 0)} comments</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>Created: {formatDate(post.created_at)}</div>
+                        {post.published_at && (
+                          <div className="text-xs text-muted-foreground">
+                            Published: {formatDate(post.published_at)}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/admin/posts/edit/${post.id}`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/blog/${post.slug}`} target="_blank">
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Post
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Preview
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Bookmark className="mr-2 h-4 w-4" />
+                              {post.featured ? 'Remove from Featured' : 'Add to Featured'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeletePost(post.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
 

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { createSlug, calculateReadingTime } from '@/lib/utils'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 interface Props {
   params: {
@@ -12,86 +16,26 @@ export async function GET(request: NextRequest, { params }: Props) {
   try {
     const { slug } = params
 
-    const post = await db.post.findUnique({
-      where: { slug },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatar: true
-          }
-        },
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            color: true
-          }
-        },
-        tags: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            color: true
-          }
-        },
-        comments: {
-          where: { approved: true },
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                avatar: true
-              }
-            },
-            replies: {
-              include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    avatar: true
-                  }
-                }
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        },
-        _count: {
-          select: {
-            likes: true,
-            comments: {
-              where: { approved: true }
-            }
-          }
-        }
-      }
-    })
+    // Fetch blog post by slug from Supabase
+    const { data: post, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('slug', slug)
+      .eq('published', true)
+      .single()
 
-    if (!post) {
-      return NextResponse.json(
-        { error: 'Post not found' },
-        { status: 404 }
-      )
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    // Increment view count
-    await db.post.update({
-      where: { slug },
-      data: { views: { increment: 1 } }
-    })
+    if (!post) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
 
     return NextResponse.json(post)
   } catch (error) {
-    console.error('Get post error:', error)
+    console.error('Error fetching blog post:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -103,79 +47,26 @@ export async function PUT(request: NextRequest, { params }: Props) {
   try {
     const { slug } = params
     const body = await request.json()
-    const {
-      title,
-      content,
-      excerpt,
-      coverImage,
-      categoryId,
-      tags,
-      published,
-      featured,
-      metaTitle,
-      metaDescription,
-      metaKeywords,
-      ogImage
-    } = body
+    const { title, content, excerpt, published, featured } = body
 
-    const newSlug = title ? createSlug(title) : undefined
-    const readingTime = content ? calculateReadingTime(content) : undefined
+    const { data: post, error } = await supabase
+      .from('posts')
+      .update({
+        title,
+        content,
+        excerpt,
+        published,
+        featured,
+        updated_at: new Date().toISOString()
+      })
+      .eq('slug', slug)
+      .select()
+      .single()
 
-    // Create or connect tags
-    const tagConnections = tags ? tags.map((tagName: string) => ({
-      where: { slug: createSlug(tagName) },
-      create: {
-        name: tagName,
-        slug: createSlug(tagName)
-      }
-    })) : undefined
-
-    const updateData: any = {}
-    
-    if (title) updateData.title = title
-    if (newSlug) updateData.slug = newSlug
-    if (content) updateData.content = content
-    if (excerpt !== undefined) updateData.excerpt = excerpt
-    if (coverImage !== undefined) updateData.coverImage = coverImage
-    if (published !== undefined) {
-      updateData.published = published
-      updateData.publishedAt = published ? new Date() : null
+    if (error) {
+      console.error('Supabase update error:', error)
+      return NextResponse.json({ error: 'Failed to update post' }, { status: 500 })
     }
-    if (featured !== undefined) updateData.featured = featured
-    if (readingTime) updateData.readingTime = readingTime
-    if (metaTitle !== undefined) updateData.metaTitle = metaTitle
-    if (metaDescription !== undefined) updateData.metaDescription = metaDescription
-    if (metaKeywords !== undefined) updateData.metaKeywords = metaKeywords
-    if (ogImage !== undefined) updateData.ogImage = ogImage
-    
-    if (categoryId !== undefined) {
-      updateData.category = categoryId ? { connect: { id: categoryId } } : { disconnect: true }
-    }
-    
-    if (tagConnections) {
-      // Clear existing tags and set new ones
-      updateData.tags = {
-        set: [],
-        connectOrCreate: tagConnections
-      }
-    }
-
-    const post = await db.post.update({
-      where: { slug },
-      data: updateData,
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatar: true
-          }
-        },
-        category: true,
-        tags: true
-      }
-    })
 
     return NextResponse.json(post)
   } catch (error) {
@@ -191,9 +82,15 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     const { slug } = params
 
-    await db.post.delete({
-      where: { slug }
-    })
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('slug', slug)
+
+    if (error) {
+      console.error('Supabase delete error:', error)
+      return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 })
+    }
 
     return NextResponse.json(
       { message: 'Post deleted successfully' },
